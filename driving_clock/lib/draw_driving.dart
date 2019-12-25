@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
 
 import 'fps.dart';
+import 'resource_container.dart';
 
 class DrawnDriving extends StatelessWidget {
   const DrawnDriving({
@@ -44,10 +45,15 @@ void drawGame(
   final skylineY = 160.0;
 
   // draw sky
-  canvas.drawRect(
-      ui.Rect.fromLTRB(
-          -paintBounds.width / 2.0, 0.0, paintBounds.width / 2.0, skylineY),
-      ui.Paint()..color = ui.Color.fromARGB(255, 100, 100, 198));
+//  canvas.drawRect(
+//      ui.Rect.fromLTRB(
+//          -paintBounds.width / 2.0, 0.0, paintBounds.width / 2.0, skylineY),
+//      ui.Paint()..color = ui.Color.fromARGB(255, 100, 100, 198));
+  if(ResourceContainer.instance.skyImage.isLoaded) {
+    Rect srcRect = Rect.fromLTRB(0,0,600,125);
+    Rect destRect = Rect.fromLTRB(-paintBounds.width/2.0, 0, paintBounds.width/2.0, skylineY);
+    canvas.drawImageRect (ResourceContainer.instance.skyImage.image, srcRect, destRect, Paint());
+  }
 
   // draw green ground
   canvas.drawRect(
@@ -77,6 +83,12 @@ void drawGame(
         ui.Paint()
           ..color =
               ui.Color.fromARGB(255, colorElement, colorElement, colorElement));
+  }
+
+  // car
+  if(ResourceContainer.instance.carImage.isLoaded) {
+    final carImage = ResourceContainer.instance.carImage.image;
+    canvas.drawImage(carImage, Offset(-carImage.width / 2.0, paintBounds.height - carImage.height), Paint());
   }
 
   // time

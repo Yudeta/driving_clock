@@ -5,6 +5,7 @@ import 'package:flutter_clock_helper/model.dart';
 import 'package:intl/intl.dart';
 
 import 'draw_driving.dart';
+import 'resource_container.dart';
 
 class DrivingClock extends StatefulWidget {
   const DrivingClock(this.model);
@@ -31,6 +32,8 @@ class _DrivingClockState extends State<DrivingClock> {
     widget.model.addListener(_updateModel);
     // Set the initial values.
     _updateModel();
+
+    ResourceContainer.instance.load();
 
     // initialize ticker
     _ticker = Ticker(_updateTime);
