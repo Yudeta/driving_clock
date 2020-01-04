@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import 'draw_driving.dart';
 import 'resource_container.dart';
+import 'dart:developer';
 
 class DrivingClock extends StatefulWidget {
   const DrivingClock(this.model);
@@ -28,6 +29,7 @@ class _DrivingClockState extends State<DrivingClock> {
 
   @override
   void initState() {
+    log("_DrivingClockState.initState()");
     super.initState();
     widget.model.addListener(_updateModel);
     // Set the initial values.
@@ -57,6 +59,7 @@ class _DrivingClockState extends State<DrivingClock> {
   }
 
   void _updateModel() {
+    log("_DrivingClockState._updateModel()");
     setState(() {
       _is24HourFormat = widget.model.is24HourFormat;
       _temperature = widget.model.temperatureString;

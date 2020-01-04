@@ -42,12 +42,15 @@ class ResourceContainer {
 
   ImageContainer skyImage;
   ImageContainer carImage;
+  ImageContainer roadImage;
 
   void load(){
     skyImage = ImageContainer(name:"images/sky.png");
     skyImage.load();
     carImage = ImageContainer(name:"images/car.png");
     carImage.load();
+    roadImage = ImageContainer(name:"images/road0.png");
+    roadImage.load();
   }
 
 }
