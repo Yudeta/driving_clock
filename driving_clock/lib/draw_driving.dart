@@ -113,8 +113,8 @@ void drawGame(
               - Y = (地面高さ - cameraY) / Z
 * */
 
-  var camera = new vector.Vector3(0.0, 100.0, 400.0 * per);
-  var cameraRotateX = (-30.0 * math.pi / 180.0) ; // [radian]
+  var camera = new vector.Vector3(0.0, 100.0, 600.0 * per);
+  var cameraRotateX = (-60.0 * math.pi / 180.0) * per; // [radian]
 
 //  // draw cam rotate X
 //      {
@@ -152,9 +152,10 @@ void drawGame(
 
       // draw sky
       if (ResourceContainer.instance.skyImage.isLoaded) {
-        Rect srcRect = Rect.fromLTRB(0, 0, 600, 125);
+        Rect srcRect = Rect.fromLTRB(0, 0, 1130*3/4, 322);
+        double imageHeightOnScreen = paintBounds.width *srcRect.bottom /  srcRect.right;
         Rect destRect = Rect.fromLTRB(
-            -paintBounds.width / 2.0, 0, paintBounds.width / 2.0, skylineY);
+            -paintBounds.width / 2.0, skylineY - imageHeightOnScreen, paintBounds.width / 2.0, skylineY);
         canvas.drawImageRect(
             ResourceContainer.instance.skyImage.image, srcRect, destRect,
             Paint());
@@ -248,6 +249,8 @@ void drawGame(
           persRoad0.x, -persRoad0.y + paintBounds.height / 2.0, 0.0);
       var screenRoad1 = vector.Vector3(
           persRoad1.x, -persRoad1.y + paintBounds.height / 2.0, 0.0);
+
+      // TODO スクリーンサイズに合わせたスケーリングも必要
 
 //      if (zCount == 1 || zCount == zCountMax - 1) {
 //        log("  pers("+persRoad0.x.toString() +", "+persRoad0.y.toString() +", "+persRoad0.z.toString() +")");
