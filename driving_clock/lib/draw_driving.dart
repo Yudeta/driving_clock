@@ -37,6 +37,59 @@ class DrawnDriving extends StatelessWidget {
   }
 }
 
+vector.Vector3 generateRoadPosition (int index, int indexMax, double roadZLength) {
+  // world coordinate
+  // make road data
+  final worldRoadZ = roadZLength * index / indexMax;
+  final worldRoadY = 0.0;
+  double worldRoadXCenter;
+  worldRoadXCenter = 0.0;
+//  if (index < indexMax / 4) {
+//    worldRoadXCenter = 0.0;
+//  } else {
+//    final zPer = (index - indexMax / 4) / (indexMax * 3 / 4);
+//    worldRoadXCenter = (-math.cos(zPer * math.pi * 1) + 1.0) * 600;
+//  }
+
+  final worldRoadCenter = vector.Vector3(
+      worldRoadXCenter, worldRoadY, worldRoadZ);
+
+  return worldRoadCenter;
+}
+
+vector.Vector3 calcPositionFromWorldToCamera (
+    vector.Vector3 cameraPosition,
+    vector.Vector3 cameraRotation,
+    vector.Vector3 positionInWorld) {
+
+  Matrix4 worldToCamview = new vector.Matrix4.rotationX(cameraRotation.x)..rotateY(cameraRotation.y)..translate(-cameraPosition);
+  final positionInCameraView = vector.Vector3.copy(positionInWorld);
+  worldToCamview.transform3(positionInCameraView);
+  return positionInCameraView;
+}
+
+vector.Vector3 calcPositionFromCameraToScreen (
+    vector.Vector3 positionInScreen,
+    double projectionPlaneDistance,
+    double screenHeight) {
+
+  if (0 < positionInScreen.z) {
+    // perspective coordinate
+    var persRoadCenter = vector.Vector3(
+        positionInScreen.x / (positionInScreen.z / projectionPlaneDistance),
+        positionInScreen.y / (positionInScreen.z / projectionPlaneDistance),
+        1.0 / positionInScreen.z);
+
+    // screen coordinate
+    var screenRoadCenter = vector.Vector3(
+        persRoadCenter.x * screenHeight, -persRoadCenter.y * screenHeight, 0.0);
+
+    return screenRoadCenter;
+  }
+
+  return vector.Vector3.zero();
+}
+
 void drawGame(
     Canvas canvas, Size size, DateTime dateTime, bool is24HourFormat) {
   final ui.Rect paintBounds =
@@ -44,64 +97,14 @@ void drawGame(
 
   canvas.save();
   canvas.translate(paintBounds.width / 2.0, paintBounds.height / 2.0);
-/*
-  final skylineY = 160.0;
 
-  // draw sky
-//  canvas.drawRect(
-//      ui.Rect.fromLTRB(
-//          -paintBounds.width / 2.0, 0.0, paintBounds.width / 2.0, skylineY),
-//      ui.Paint()..color = ui.Color.fromARGB(255, 100, 100, 198));
-  if (ResourceContainer.instance.skyImage.isLoaded) {
-    Rect srcRect = Rect.fromLTRB(0, 0, 600, 125);
-    Rect destRect = Rect.fromLTRB(
-        -paintBounds.width / 2.0, 0, paintBounds.width / 2.0, skylineY);
-    canvas.drawImageRect(
-        ResourceContainer.instance.skyImage.image, srcRect, destRect, Paint());
-  }
-
-  // draw green ground
-  canvas.drawRect(
-      ui.Rect.fromLTRB(-paintBounds.width / 2.0, skylineY,
-          paintBounds.width / 2.0, paintBounds.height),
-      ui.Paint()..color = ui.Color.fromARGB(255, 70, 198, 49));
-*/
   // draw road
   var durationInSec = 4;
   var timeInMilliseconds = dateTime.second * 1000 + dateTime.millisecond;
   var timeOffsetInMillisecones = timeInMilliseconds -
       (dateTime.second / durationInSec).floor() * durationInSec * 1000;
   var per = timeOffsetInMillisecones / (durationInSec * 1000);
-  var targetX = math.sin(per * 2.0 * math.pi) * (paintBounds.width / 4.0);
 
-//  var divNum = 60;
-/*  for (var i = 0; i < divNum; i++) {
-    double per = i / (divNum - 1);
-    var span = paintBounds.height / divNum;
-    var y = paintBounds.height * per + skylineY;
-    var w = (paintBounds.width / 2.0) * (per * 0.95 + 0.05);
-    double perDelay = per * 0.8;
-    var centerX = targetX * (1.0 - math.sin(perDelay * math.pi / 2.0));
-    var colorElement = 85;
-    canvas.drawRect(
-        ui.Rect.fromLTRB(centerX - w, y, centerX + w, y + span),
-        ui.Paint()
-          ..color =
-              ui.Color.fromARGB(255, colorElement, colorElement, colorElement));
-  }*/
-  // draw road by image
-/*  for (var i = 0; i < divNum; i++) {
-    double per = i / (divNum - 1);
-    var span = paintBounds.height / divNum;
-    var y = paintBounds.height * per + skylineY;
-    var w = (paintBounds.width / 2.0) * (per * 0.95 + 0.05);
-    double perDelay = per * 0.8;
-    var centerX = targetX * (1.0 - math.sin(perDelay * math.pi / 2.0));
-    Rect srcRect = Rect.fromLTRB(0,124,600,125);
-    Rect destRect = Rect.fromLTRB(centerX - w, y, centerX + w, y + span);
-    canvas.drawImageRect (ResourceContainer.instance.skyImage.image, srcRect, destRect, Paint());
-  }*/
-  // draw road with perspective projection
 /*
       - cameraY = カメラの高さ
       - 現在地点〜消失点までの距離で以下の処理
@@ -113,153 +116,102 @@ void drawGame(
               - Y = (地面高さ - cameraY) / Z
 * */
 
-  var camera = new vector.Vector3(0.0, 100.0, 0.0 * per);
-  var cameraRotateX = (-30.0 * math.pi / 180.0);// * per; // [radian]
+  var camera = vector.Vector3(0.0, 100.0, 1000.0 * per);
+  var cameraRotateX = (-30.0 * math.pi / 180.0)* per; // [radian]
+  var rotY = (120.0/2 - 120.0*per) * math.pi / 180.0; // [radian]
+  var cameraRotation = vector.Vector3(cameraRotateX, rotY, 0.0);
 
   double skylineY = -double.infinity;
   vector.Vector3 timeBoardPosition;
   double timeBoardScale = -double.infinity;
 
+  final projectionPlaneDistance = 1.0;
+  final screenHeight = paintBounds.height / 2.0;
+  final farRoadDistance = 1000.0;
+
+  // draw BGs
+  {
+    final worldVanishingPointX = 0.0;
+    final worldVanishingPointY = 0.0;
+    final worldVanishingPointZ = farRoadDistance;
+    final worldVanishingPoint = vector.Vector3(worldVanishingPointX, worldVanishingPointY, worldVanishingPointZ);
+
+    // camera view coordinate
+    final vanishingPointCameraRotation = vector.Vector3.copy(cameraRotation);
+    vanishingPointCameraRotation.y = 0.0;
+    final cameraViewVanishingPoint = calcPositionFromWorldToCamera(camera, vanishingPointCameraRotation, worldVanishingPoint);
+
+    final screenVanishingPoint = calcPositionFromCameraToScreen(
+        cameraViewVanishingPoint,
+        projectionPlaneDistance,
+        screenHeight);
+
+    skylineY = screenVanishingPoint.y;
+
+    // draw sky
+    if (ResourceContainer.instance.skyImage.isLoaded) {
+      Rect srcRect = Rect.fromLTRB(0, 0, 1130 * 3 / 4, 322);
+      double imageHeightOnScreen = paintBounds.width * srcRect.bottom /
+          srcRect.right;
+      Rect destRect = Rect.fromLTRB(
+          -paintBounds.width / 2.0, skylineY - imageHeightOnScreen,
+          paintBounds.width / 2.0, skylineY);
+      canvas.drawImageRect(
+          ResourceContainer.instance.skyImage.image, srcRect, destRect,
+          Paint());
+    }
+
+    // draw green ground
+    canvas.drawRect(
+        ui.Rect.fromLTRB(-paintBounds.width / 2.0, skylineY,
+            paintBounds.width / 2.0, paintBounds.height),
+        ui.Paint()
+          ..color = ui.Color.fromARGB(255, 70, 198, 49));
+  }
+
   var zCountMax = 50;
   var prevScreenY = -double.infinity;
   var p = Paint();
-//  var skyImage = ResourceContainer.instance.skyImage.image;
+
   for (var zCount = zCountMax-1; 0 <= zCount; zCount--) {
-
-    if(zCount == zCountMax - 2 && prevScreenY != -double.infinity) {
-      skylineY = prevScreenY; // nearly a vanishing point
-
-      // draw sky
-      if (ResourceContainer.instance.skyImage.isLoaded) {
-        Rect srcRect = Rect.fromLTRB(0, 0, 1130*3/4, 322);
-        double imageHeightOnScreen = paintBounds.width *srcRect.bottom /  srcRect.right;
-        Rect destRect = Rect.fromLTRB(
-            -paintBounds.width / 2.0, skylineY - imageHeightOnScreen, paintBounds.width / 2.0, skylineY);
-        canvas.drawImageRect(
-            ResourceContainer.instance.skyImage.image, srcRect, destRect,
-            Paint());
-      }
-
-      // draw green ground
-      canvas.drawRect(
-          ui.Rect.fromLTRB(-paintBounds.width / 2.0, skylineY,
-              paintBounds.width / 2.0, paintBounds.height),
-          ui.Paint()
-            ..color = ui.Color.fromARGB(255, 70, 198, 49));
-    }
+    final roadWidth = 200.0;
 
     // world coordinate
-    final worldRoadZ = (zCount * 10).toDouble();
-    final roadWidth = 200.0;
-    final worldRoadY = 0.0;
-    double worldRoadXCenter;
-    if (zCount < zCountMax / 4) {
-      worldRoadXCenter = 0.0;
-    } else {
-      final zPer = (zCount - zCountMax / 4) / (zCountMax * 3 / 4);
-      worldRoadXCenter = (-math.cos(zPer * math.pi * 1) + 1.0) * 600;
-    }
-    final worldRoad0 =
-        vector.Vector3(worldRoadXCenter - roadWidth, worldRoadY, worldRoadZ);
-    final worldRoad1 =
-        vector.Vector3(worldRoadXCenter + roadWidth, worldRoadY, worldRoadZ);
-    final worldRoadCenter =
-      vector.Vector3(worldRoadXCenter, worldRoadY, worldRoadZ);
-////      log((cameraRotateX / math.pi * 180).toString()+": "+worldRoadY.toString()+", "+worldRoadZ.toString()+" -> cam "+camviewRoadY.toString()+", "+camviewRoadZ.toString()+" -> pers "+persY.toString()+" -> screen "+screenY.toString());
-//      log("["+per.toString()+"]");
-//      log("  z:"+zCount.toString() +" -> "+ worldRoad0.z.toString());
-//      log("  world("+worldRoad0.x.toString() +", "+worldRoad0.y.toString() +", "+worldRoad0.z.toString() +")");
-//    }
+    final worldRoadCenter = generateRoadPosition(zCount, zCountMax, farRoadDistance);
 
     // camera view coordinate
-    var rotY = (45 - 90.0*per) * math.pi / 180.0; // [radian]
-//    Matrix4 worldToCamview = new vector.Matrix4.rotationY(cameraRotateX)..translate(-camera);
-//    Matrix4 worldToCamview = new vector.Matrix4.rotationY(cameraRotateX)..rotateX(-90*math.pi/180)..translate(-camera);
-//    Matrix4 worldToCamview = new vector.Matrix4.translation(-camera)..rotateY(cameraRotateX);
-    //log("mat: " + worldToCamview.toString());
-//    Matrix4 worldToCamview = new vector.Matrix4.translation(-camera)..rotateX(cameraRotateX);
-    final translateMatrix = vector.Matrix4.translation(-camera);
-    final rotateXMatrix = vector.Matrix4.rotationX(cameraRotateX);
-    final rotateYMatrix = vector.Matrix4.rotationY(rotY);
-    final worldToCamview = rotateXMatrix.multiplied(rotateYMatrix).multiplied(translateMatrix);
-    final camviewRoad0 = vector.Vector3.copy(worldRoad0);
-    final camviewRoad1 = vector.Vector3.copy(worldRoad1);
-    final camviewRoadCenter = vector.Vector3.copy(worldRoadCenter);
-    worldToCamview.transform3(camviewRoad0);
-    worldToCamview.transform3(camviewRoad1);
-    worldToCamview.transform3(camviewRoadCenter);
-//    translateMatrix.transform3(camviewRoad0);
-//    translateMatrix.transform3(camviewRoad1);
-//    rotateYMatrix.transform3(camviewRoad0);
-//    rotateYMatrix.transform3(camviewRoad1);
-//    rotateXMatrix.transform3(camviewRoad0);
-//    rotateXMatrix.transform3(camviewRoad1);
-    final camviewRoadEdge= vector.Vector3(
+    final camviewRoadCenter = calcPositionFromWorldToCamera(camera, cameraRotation, worldRoadCenter);
+    final camviewRoadEdge = vector.Vector3(
         camviewRoadCenter.x + roadWidth,
         camviewRoadCenter.y,
         camviewRoadCenter.z);
 
-    final projectionPlaneDistance = 1.0;
-    if (0 < camviewRoad0.z) {
-      // perspective coordinate
-      var persRoad0 = vector.Vector3(
-          camviewRoad0.x / (camviewRoad0.z / projectionPlaneDistance),
-          camviewRoad0.y / (camviewRoad0.z / projectionPlaneDistance),
-          1.0 / camviewRoad0.z);
-      var persRoad1 = vector.Vector3(
-          camviewRoad1.x / (camviewRoad1.z / projectionPlaneDistance),
-          camviewRoad1.y / (camviewRoad1.z / projectionPlaneDistance),
-          1.0 / camviewRoad1.z);
-      var persRoadCenter = vector.Vector3(
-          camviewRoadCenter.x / (camviewRoadCenter.z / projectionPlaneDistance),
-          camviewRoadCenter.y / (camviewRoadCenter.z / projectionPlaneDistance),
-          1.0 / camviewRoadCenter.z);
-      var persRoadEdge = vector.Vector3(
-          camviewRoadEdge.x / (camviewRoadEdge.z / projectionPlaneDistance),
-          camviewRoadEdge.y / (camviewRoadEdge.z / projectionPlaneDistance),
-          1.0 / camviewRoadEdge.z);
-//      var persRoad0 = vector.Vector3.copy(camviewRoad0);
-//      var persRoad1 = vector.Vector3.copy(camviewRoad1);
+    if (0 < camviewRoadCenter.z) {
+      // screen view coordinate
+      final screenRoadCenter = calcPositionFromCameraToScreen(
+          camviewRoadCenter,
+          projectionPlaneDistance,
+          screenHeight);
+      final screenRoadEdge = calcPositionFromCameraToScreen(
+          camviewRoadEdge,
+          projectionPlaneDistance,
+          screenHeight);
 
-      // screen coordinate
-//      Matrix4 scaleMatrix = vector.Matrix4.diagonal3(vector.Vector3(0.1, 0.1, 0.1));
-//      scaleMatrix.transform3(persRoad0);
-//      scaleMatrix.transform3(persRoad1);
-      // horizontal center is applied by canvas.translate()
-//      var screenX0 = persX0;
-//      var screenX1 = persX1;
-//      var screenY = -persY + paintBounds.height / 2.0;
-//      var screenRoad0 = vector.Vector3(persRoad0.x, -persRoad0.y, 0.0);
-//      var screenRoad1 = vector.Vector3(persRoad1.x, -persRoad1.y, 0.0);
-      final screenHeight = paintBounds.height / 2.0;
-      var screenRoad0 = vector.Vector3(
-          persRoad0.x * screenHeight, -persRoad0.y * screenHeight, 0.0);
-      var screenRoad1 = vector.Vector3(
-          persRoad1.x * screenHeight, -persRoad1.y * screenHeight, 0.0);
-      var screenRoadCenter = vector.Vector3(
-          persRoadCenter.x * screenHeight, -persRoadCenter.y * screenHeight, 0.0);
-      var screenRoadEdge = vector.Vector3(
-          persRoadEdge.x * screenHeight, -persRoadEdge.y * screenHeight, 0.0);
-
-      if (zCount == 1 || zCount == zCountMax - 1) {
-        log("["+zCount.toString()+"]");
-        log("  rotY["+(rotY/math.pi*180).toString()+"]");
-//        log("  world("+worldRoad0.x.toString() +", "+worldRoad0.y.toString() +", "+worldRoad0.z.toString() +")");
-//        log("  camera("+camviewRoad0.x.toString() +", "+camviewRoad0.y.toString() +", "+camviewRoad0.z.toString() +")");
-//        log("  persRoad0("+persRoad0.x.toString() +", "+persRoad0.y.toString() +", "+persRoad0.z.toString() +")");
-//        log("  persRoad1("+persRoad1.x.toString() +", "+persRoad1.y.toString() +", "+persRoad1.z.toString() +")");
-        log("  world("+worldRoad0.x.toString() +", "+worldRoad0.y.toString() +", "+worldRoad0.z.toString() +")");
-        log("  camera("+camviewRoad0.x.toString() +", "+camviewRoad0.y.toString() +", "+camviewRoad0.z.toString() +")");
-        log("  persRoadCenter("+persRoadCenter.x.toString() +", "+persRoadCenter.y.toString() +", "+persRoadCenter.z.toString() +")");
-        log("  screenRoadCenter("+screenRoadCenter.x.toString() +", "+screenRoadCenter.y.toString() +", "+screenRoadCenter.z.toString() +")");
-        log("  screenRoadEdge("+screenRoadEdge.x.toString() +", "+screenRoadEdge.y.toString() +", "+screenRoadEdge.z.toString() +")");
-      }
 //      if (zCount == 1 || zCount == zCountMax - 1) {
-//        log("  pers("+persRoad0.x.toString() +", "+persRoad0.y.toString() +", "+persRoad0.z.toString() +")");
-//        log("  screen("+screenRoad0.x.toString() +", "+screenRoad0.y.toString() +", "+screenRoad0.z.toString() +")");
+//        log("["+zCount.toString()+"]");
+//        log("  rotY["+(rotY/math.pi*180).toString()+"]");
+////        log("  world("+worldRoad0.x.toString() +", "+worldRoad0.y.toString() +", "+worldRoad0.z.toString() +")");
+////        log("  camera("+camviewRoad0.x.toString() +", "+camviewRoad0.y.toString() +", "+camviewRoad0.z.toString() +")");
+////        log("  persRoad0("+persRoad0.x.toString() +", "+persRoad0.y.toString() +", "+persRoad0.z.toString() +")");
+////        log("  persRoad1("+persRoad1.x.toString() +", "+persRoad1.y.toString() +", "+persRoad1.z.toString() +")");
+////        log("  world("+worldRoad0.x.toString() +", "+worldRoad0.y.toString() +", "+worldRoad0.z.toString() +")");
+////        log("  camera("+camviewRoad0.x.toString() +", "+camviewRoad0.y.toString() +", "+camviewRoad0.z.toString() +")");
+////        log("  persRoadCenter("+persRoadCenter.x.toString() +", "+persRoadCenter.y.toString() +", "+persRoadCenter.z.toString() +")");
+//        log("  screenRoadCenter("+screenRoadCenter.x.toString() +", "+screenRoadCenter.y.toString() +", "+screenRoadCenter.z.toString() +")");
+//        log("  screenRoadEdge("+screenRoadEdge.x.toString() +", "+screenRoadEdge.y.toString() +", "+screenRoadEdge.z.toString() +")");
 //      }
 
-      if(zCount == zCountMax / 4){
+/*      if(zCount == zCountMax / 4){
         timeBoardPosition = vector.Vector3.copy(screenRoad0);
 
         var camviewTimeBoard = vector.Vector3(camviewRoad0.x, camviewRoad0.y + 40.0, camviewRoad0.z);
@@ -272,7 +224,7 @@ void drawGame(
             persTimeBoard.x, -persTimeBoard.y, 0.0);
 
         timeBoardScale = screenRoad0.y - screenTimeBoard.y;
-      }
+      }*/
 
       if (prevScreenY != -double.infinity) {
         var x0 = screenRoadEdge.x;
@@ -289,17 +241,7 @@ void drawGame(
           y0 = y1;
           y1 = tmp;
         }
-//        if (prevScreenY < screenRoadCenter.y) {
-//          y0 = prevScreenY;
-//          y1 = screenRoadCenter.y;
-//        } else {
-//          y0 = screenRoadCenter.y;
-//          y1 = prevScreenY;
-//        }
         Rect destRect = Rect.fromLTRB(x0, y0, x1, y1+1);
-      if (zCount == 1 || zCount == zCountMax - 1) {
-        log("  destRect("+destRect.left.toString() +", "+destRect.top.toString() +", "+destRect.right.toString()+", "+destRect.bottom.toString() +")");
-      }
 
         if (ResourceContainer.instance.roadImage.isLoaded) {
           var textureIndex = zCount % 4;
@@ -308,12 +250,6 @@ void drawGame(
           canvas.drawImageRect(
               ResourceContainer.instance.roadImage.image, srcRect, destRect, p);
         }
-//        var colorElement = 85;
-//        canvas.drawRect(
-//            destRect,
-//            ui.Paint()
-//              ..color =
-//              ui.Color.fromARGB(255, colorElement, colorElement, colorElement));
       }
       prevScreenY = screenRoadCenter.y;
     } else {
