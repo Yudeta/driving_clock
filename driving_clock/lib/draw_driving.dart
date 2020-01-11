@@ -37,9 +37,8 @@ class DrawnDriving extends StatelessWidget {
   }
 }
 
-vector.Vector3 generateRoadPosition (int index, int indexMax, double roadZLength) {
+vector.Vector3 generateRoadPosition (int index, int indexMax, double roadZLength, double per) {
   // world coordinate
-  // make road data
   final worldRoadZ = roadZLength * index / indexMax;
   final worldRoadY = 0.0;
   double worldRoadXCenter;
@@ -48,8 +47,16 @@ vector.Vector3 generateRoadPosition (int index, int indexMax, double roadZLength
 //    worldRoadXCenter = 0.0;
 //  } else {
 //    final zPer = (index - indexMax / 4) / (indexMax * 3 / 4);
-//    worldRoadXCenter = (-math.cos(zPer * math.pi * 1) + 1.0) * 600;
+//    worldRoadXCenter = (-math.cos(zPer * math.pi * 1) + 1.0) * 600 * per;
 //  }
+  if (index < indexMax / 8) {
+    worldRoadXCenter = 0.0;
+  } else {
+    final zPer = (index - indexMax / 8) / (indexMax * 7 / 8);
+    worldRoadXCenter = (-math.cos(zPer * math.pi * 0.5) + 1.0) * 1800 * per;
+  }
+//  final zPer = index / indexMax;
+//  worldRoadXCenter = (-math.cos(zPer * math.pi * 0.5) + 1.0) * 1800 * per;
 
   final worldRoadCenter = vector.Vector3(
       worldRoadXCenter, worldRoadY, worldRoadZ);
@@ -116,9 +123,9 @@ void drawGame(
               - Y = (地面高さ - cameraY) / Z
 * */
 
-  var camera = vector.Vector3(0.0, 100.0, 1000.0 * per);
-  var cameraRotateX = (-30.0 * math.pi / 180.0)* per; // [radian]
-  var rotY = (120.0/2 - 120.0*per) * math.pi / 180.0; // [radian]
+  var camera = vector.Vector3(0.0, 100.0, 200.0 * 0.0);
+  var cameraRotateX = 0.0;//(-30.0 * math.pi / 180.0)* per; // [radian]
+  var rotY = 0.0;//(120.0/2 - 120.0*per) * math.pi / 180.0; // [radian]
   var cameraRotation = vector.Vector3(cameraRotateX, rotY, 0.0);
 
   double skylineY = -double.infinity;
@@ -169,15 +176,18 @@ void drawGame(
           ..color = ui.Color.fromARGB(255, 70, 198, 49));
   }
 
-  var zCountMax = 50;
+  var zCountMax = 16;
   var prevScreenY = -double.infinity;
+  var prevScreenX0 = -double.infinity;
+  var prevScreenX1 = -double.infinity;
   var p = Paint();
 
   for (var zCount = zCountMax-1; 0 <= zCount; zCount--) {
+    // band毎の処理
     final roadWidth = 200.0;
 
     // world coordinate
-    final worldRoadCenter = generateRoadPosition(zCount, zCountMax, farRoadDistance);
+    final worldRoadCenter = generateRoadPosition(zCount, zCountMax, farRoadDistance, per);
 
     // camera view coordinate
     final camviewRoadCenter = calcPositionFromWorldToCamera(camera, cameraRotation, worldRoadCenter);
@@ -226,9 +236,10 @@ void drawGame(
         timeBoardScale = screenRoad0.y - screenTimeBoard.y;
       }*/
 
+      // draw road band
+      var x0 = screenRoadEdge.x;
+      var x1 = screenRoadCenter.x - (screenRoadEdge.x - screenRoadCenter.x);
       if (prevScreenY != -double.infinity) {
-        var x0 = screenRoadEdge.x;
-        var x1 = screenRoadCenter.x - (screenRoadEdge.x - screenRoadCenter.x);
         var y0 = prevScreenY;
         var y1 = screenRoadCenter.y;
         if (x1 < x0) {
@@ -241,16 +252,48 @@ void drawGame(
           y0 = y1;
           y1 = tmp;
         }
-        Rect destRect = Rect.fromLTRB(x0, y0, x1, y1+1);
-
         if (ResourceContainer.instance.roadImage.isLoaded) {
-          var textureIndex = zCount % 4;
-          var textureY = (textureIndex <= 1) ? 0.0 : 40.0;
-          Rect srcRect = Rect.fromLTRB(0, textureY, 400, textureY + 1.0);
-          canvas.drawImageRect(
-              ResourceContainer.instance.roadImage.image, srcRect, destRect, p);
+//          // 直方体で描画
+//          Rect destRect = Rect.fromLTRB(x0, y0, x1, y1+1);
+//          var textureIndex = zCount % 4;
+//          var textureY = (textureIndex <= 1) ? 0.0 : 40.0;
+//          Rect srcRect = Rect.fromLTRB(0, textureY, 400, textureY + 1.0);
+//          canvas.drawImageRect(
+//              ResourceContainer.instance.roadImage.image, srcRect, destRect, p);
+//
+          // 台形描画
+          final intY0 = y0.floor();
+          final intY1 = y1.floor();
+          if(intY0 <= intY1){
+            final bandHeight = intY1 - intY0 + 1;
+            for (var y = 0; y < bandHeight; y++) {
+              final bandY0 = y.toDouble() + intY0;
+              if(paintBounds.height / 2.0 < bandY0){
+                continue;
+              }
+              final bandPer = y / (bandHeight - 1);
+//              log("prevScreenX0:" + prevScreenX0.toString() + ", x:" + x0.toString());
+              final bandX0 = prevScreenX0 * (1.0 - bandPer) + x0 * bandPer;//(x0 - prevScreenX0) * bandPer + prevScreenX0;
+              final bandX1 = prevScreenX1 * (1.0 - bandPer) + x1 * bandPer;//(x1 - prevScreenX1) * bandPer + prevScreenX1;
+
+              if(bandX0 < -10000.0 || 10000.0 < bandX0 || bandY0 < -paintBounds.height / 2.0 || paintBounds.height / 2.0 < bandY0){
+//                log("outrange:" + bandX0.toString() + "y:" + bandY0.toString());
+                continue;
+              }
+
+              Rect destRect = Rect.fromLTRB(bandX0, bandY0, bandX1, bandY0+2); // TODO: +1だと縞模様になる。何故？destRectのBottomをPixel単位で正確な指定をする方法を調査
+
+              final textureHeight = 64.0; //[pixel]
+              var textureY = textureHeight * bandPer;
+              Rect srcRect = Rect.fromLTRB(0, textureY, 400, textureY+0.1);
+              canvas.drawImageRect(
+                  ResourceContainer.instance.roadImage.image, srcRect, destRect, p);
+            }
+          }
         }
       }
+      prevScreenX0 = x0;
+      prevScreenX1 = x1;
       prevScreenY = screenRoadCenter.y;
     } else {
       prevScreenY = -double.infinity;
