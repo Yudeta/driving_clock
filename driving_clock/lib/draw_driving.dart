@@ -40,83 +40,43 @@ class DrawnDriving extends StatelessWidget {
 List generateRoad(int bandNum, double bandLength, double progressInZone) {
   var bandList = List(bandNum);
 
-  final bandStartIndex = (progressInZone / bandLength).floor();
+  double calcVanishingPointX(double progress, double progressMax){
+    if(progress < 2000.0){
+      return 0.0;
+    }else if(progress < 4000.0){
+      final progressPer = (progress - 2000.0) / 2000.0;
+      return -math.sin(0.5 * math.pi * progressPer) * 3000.0;
+    }else if(progress < 6000.0){
+      final progressPer = (progress - 4000.0) / 2000.0;
+      return -math.sin(0.5 * math.pi * (1.0 - progressPer)) * 3000.0;
+    }
+    return 0.0;
+  }
+  final progress = progressInZone % 6000.0;
+  final vanishingPointX = calcVanishingPointX(progress, 6000.0);
 
   for(var i=0;i<bandNum;i++){
-    double worldRoadY = 0.0;
-    double worldRoadXCenter;
-    final bandIndex = bandStartIndex + i;
-    worldRoadXCenter = math.sin(math.pi * (bandIndex / 10)) * 200.0;
-//
-//    if(bandIndex % 3 == 0){
-//      worldRoadXCenter = 0.0;
-//    }else if(bandIndex % 3 == 1){
-//      worldRoadXCenter = 200.0;
-//    }else{
-//      worldRoadXCenter = -200.0;
-//    }
+    double calcRoadY(double bandZ){
+      if(bandZ < 2000.0){
+        return math.sin(math.pi * 2.0 * (bandZ/2000.0)) * 30.0;
+      }else {
+        return 0.0;
+      }
+    }
+//    double worldRoadY = math.sin(math.pi * 2.0 * ((yPer + i / (bandNum - 1))%1.0)) * 20.0;
+    double bandZ = (progress + i * bandLength) % 6000.0;
+    double worldRoadY = calcRoadY(bandZ);
 
-    final worldRoadZ = bandLength * i - (progressInZone % bandLength);
+    double worldRoadXCenter;
+    final zPer = i.toDouble() / (bandNum - 1).toDouble();
+    worldRoadXCenter = zPer * zPer * vanishingPointX;
+    final worldRoadZ = bandLength * i;
     final worldRoadCenter = vector.Vector3(
         worldRoadXCenter, worldRoadY, worldRoadZ);
     bandList[i] = worldRoadCenter;
   }
 
   return bandList;
-}
-
-vector.Vector3 generateRoadPosition (int index, int indexMax, double roadZLength, double progressInZone) {
-  // world coordinate
-//  final worldRoadZ = roadZLength * index / indexMax;
-  double genY(int index, int indexMax){
-    if(index < indexMax / 2){ return 0.0; }else{ return 60.0; }
-//    return math.sin((index / indexMax) * math.pi) * 90;
-  }
-  final worldRoadY = genY(index, indexMax);
-  double worldRoadXCenter;
-
-  // 0
-//  worldRoadXCenter = 0.0;
-
-  // 1/4
-//  if (index < indexMax / 4) {
-//    worldRoadXCenter = 0.0;
-//  } else {
-//    final zPer = (index - indexMax / 4) / (indexMax * 3 / 4);
-//    worldRoadXCenter = (-math.cos(zPer * math.pi * 1) + 1.0) * 600 * per;
-//  }
-
-  // 1/8
-//  if (index < indexMax / 8) {
-//    worldRoadXCenter = 0.0;
-//  } else {
-//    final zPer = (index - indexMax / 8) / (indexMax * 7 / 8);
-//    worldRoadXCenter = (-math.cos(zPer * math.pi * 0.5) + 1.0) * 1800 * per;
-//  }
-
-  // All
-//  final zPer = index / indexMax;
-//  worldRoadXCenter = (-math.cos(zPer * math.pi * 0.5) + 1.0) * 1800 * per;
-
-//  final worldRoadCenter = vector.Vector3(
-//      worldRoadXCenter, worldRoadY, worldRoadZ);
-
-  // 1/8 & progressInZone[msec]
-  final per = (progressInZone % 1000.0) / 1000.0;
-  worldRoadXCenter = 0.0;
-  if (index < indexMax / 8) {
-    worldRoadXCenter = 0.0;
-  } else {
-    final zPer = (index - indexMax / 8) / (indexMax * 7 / 8);
-    worldRoadXCenter = (-math.cos(zPer * math.pi * 0.5) + 1.0) * 1800 * per;
-  }
-
-  final bandDistance = roadZLength / indexMax;
-  final worldRoadZ = roadZLength * index / indexMax - (progressInZone % 1000.0) / 1000.0 * bandDistance;
-  final worldRoadCenter = vector.Vector3(
-      worldRoadXCenter, worldRoadY, worldRoadZ);
-
-  return worldRoadCenter;
 }
 
 vector.Vector3 calcPositionFromWorldToCamera (
@@ -161,14 +121,17 @@ void drawGame(
   canvas.translate(paintBounds.width / 2.0, paintBounds.height / 2.0);
 
   // draw road
-  var durationInSec = 4;
   var timeInMilliseconds = dateTime.second * 1000 + dateTime.millisecond;
-  var timeOffsetInMillisecones = timeInMilliseconds -
-      (dateTime.second / durationInSec).floor() * durationInSec * 1000;
-  var per = timeOffsetInMillisecones / (durationInSec * 1000);
 
-  var progressInZone = timeInMilliseconds.toDouble()*0.5; //[meter]
+  var progressInZone = timeInMilliseconds.toDouble() * 1.0; //[meter]
   final progressInZoneMax = 60 * 1000;
+  /*
+  - 基本方針
+    - 可視コースの形状をZ方向に16分割、分割したBand毎にpixel単位で描画する。
+    - テクスチャスクロールで走行を表現。
+    - コース形状の変形と、テクスチャスクロールが独立して動く、擬似3D。これによりスピード感を出す。
+      - １つのカーブに対して、現実よりもスクロールが長い（速くても曲がり切ることはない）
+  * */
   /*
     - Zone: １つの風景が続く範囲。１分。
       - ゾーン内の進行距離: 60秒 * 1000msec = 60000msec
@@ -187,10 +150,6 @@ void drawGame(
               - Y = (地面高さ - cameraY) / Z
 * */
 
-  var camera = vector.Vector3(0.0, 100.0, 200.0 * 0.0);
-  var cameraRotateX = 0.0;//(-70.0 * math.pi / 180.0)* per; // [radian]
-  var rotY = 0.0;//(120.0/2 - 120.0*per) * math.pi / 180.0; // [radian]
-  var cameraRotation = vector.Vector3(cameraRotateX, rotY, 0.0);
 
   double skylineY = -double.infinity;
   vector.Vector3 timeBoardPosition;
@@ -200,8 +159,25 @@ void drawGame(
   final screenHeight = paintBounds.height / 2.0;
   final farRoadDistance = 1600.0;
 
+  var zCountMax = 16;
+  var prevScreenY = -double.infinity;
+  var prevScreenX0 = -double.infinity;
+  var prevScreenX1 = -double.infinity;
+  var p = Paint();
+
+  var bandList = generateRoad(zCountMax, farRoadDistance / zCountMax, progressInZone);
+
+  double calcCameraRotateX(double y0, double y1){
+    final yDiff = math.min(math.max(y1 - y0, -20.0), 20.0);
+    return yDiff * math.pi / 180.0;
+  }
+  var camera = vector.Vector3(0.0, 100.0, 200.0 * 0.0);
+  var cameraRotateX = calcCameraRotateX(bandList[0].y, bandList[1].y);//(-20.0 * math.pi / 180.0)* per; // [radian]
+  var rotY = 0.0;//(120.0/2 - 120.0*per) * math.pi / 180.0; // [radian]
+  var cameraRotation = vector.Vector3(cameraRotateX, rotY, 0.0);
+
   // draw BGs
-  {
+      {
     final worldVanishingPointX = 0.0;
     final worldVanishingPointY = 0.0;
     final worldVanishingPointZ = farRoadDistance;
@@ -240,14 +216,6 @@ void drawGame(
           ..color = ui.Color.fromARGB(255, 70, 198, 49));
   }
 
-  var zCountMax = 16;
-  var prevScreenY = -double.infinity;
-  var prevScreenX0 = -double.infinity;
-  var prevScreenX1 = -double.infinity;
-  var p = Paint();
-
-  var bandList = generateRoad(zCountMax, farRoadDistance / zCountMax, progressInZone);
-
   for (var zCount = zCountMax-1; 0 <= zCount; zCount--) {
     // band毎の処理
     final roadWidth = 200.0;
@@ -276,20 +244,6 @@ void drawGame(
           camviewRoadEdge,
           projectionPlaneDistance,
           screenHeight);
-
-//      if (zCount == 1 || zCount == zCountMax - 1) {
-//        log("["+zCount.toString()+"]");
-//        log("  rotY["+(rotY/math.pi*180).toString()+"]");
-////        log("  world("+worldRoad0.x.toString() +", "+worldRoad0.y.toString() +", "+worldRoad0.z.toString() +")");
-////        log("  camera("+camviewRoad0.x.toString() +", "+camviewRoad0.y.toString() +", "+camviewRoad0.z.toString() +")");
-////        log("  persRoad0("+persRoad0.x.toString() +", "+persRoad0.y.toString() +", "+persRoad0.z.toString() +")");
-////        log("  persRoad1("+persRoad1.x.toString() +", "+persRoad1.y.toString() +", "+persRoad1.z.toString() +")");
-////        log("  world("+worldRoad0.x.toString() +", "+worldRoad0.y.toString() +", "+worldRoad0.z.toString() +")");
-////        log("  camera("+camviewRoad0.x.toString() +", "+camviewRoad0.y.toString() +", "+camviewRoad0.z.toString() +")");
-////        log("  persRoadCenter("+persRoadCenter.x.toString() +", "+persRoadCenter.y.toString() +", "+persRoadCenter.z.toString() +")");
-//        log("  screenRoadCenter("+screenRoadCenter.x.toString() +", "+screenRoadCenter.y.toString() +", "+screenRoadCenter.z.toString() +")");
-//        log("  screenRoadEdge("+screenRoadEdge.x.toString() +", "+screenRoadEdge.y.toString() +", "+screenRoadEdge.z.toString() +")");
-//      }
 
 /*      if(zCount == zCountMax / 4){
         timeBoardPosition = vector.Vector3.copy(screenRoad0);
@@ -332,7 +286,7 @@ void drawGame(
 //              ResourceContainer.instance.roadImage.image, srcRect, destRect, p);
 //
           // 台形描画
-//          final bandProgressPer = dateTime.millisecond / 1000.0;
+          final bandProgressPer = (progressInZone % 250.0) / 250.0;
           final intY0 = y0.floor();
           final intY1 = y1.floor();
           if(intY0 <= intY1){
@@ -358,9 +312,9 @@ void drawGame(
               Rect destRect = Rect.fromLTRB(bandX0, bandY0, bandX1, bandY0+2); // TODO: +1だと縞模様になる。何故？destRectのBottomをPixel単位で正確な指定をする方法を調査
 
               final textureHeight = 64.0; //[pixel]
-              var textureY = (textureHeight - 1.0) * bandPer;
-//              var textureY = textureHeight * ((bandPer - bandProgressPer) % 1.0);
-              Rect srcRect = Rect.fromLTRB(0, textureY, 400, textureY + 1.0);
+//              var textureY = (textureHeight - 1.0) * bandPer;
+              var textureY = textureHeight * ((bandPer - bandProgressPer) % 0.99);
+              Rect srcRect = Rect.fromLTRB(0, textureY, 400, textureY + 0.01);
               canvas.drawImageRect(
                   ResourceContainer.instance.roadImage.image, srcRect, destRect, p);
             }
