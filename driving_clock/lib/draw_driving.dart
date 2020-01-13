@@ -45,10 +45,10 @@ List generateRoad(int bandNum, double bandLength, double progressInZone) {
       return 0.0;
     }else if(progress < 4000.0){
       final progressPer = (progress - 2000.0) / 2000.0;
-      return -math.sin(0.5 * math.pi * progressPer) * 3000.0;
+      return math.sin(0.5 * math.pi * progressPer) * 3000.0;
     }else if(progress < 6000.0){
       final progressPer = (progress - 4000.0) / 2000.0;
-      return -math.sin(0.5 * math.pi * (1.0 - progressPer)) * 3000.0;
+      return math.sin(0.5 * math.pi * (1.0 - progressPer)) * 3000.0;
     }
     return 0.0;
   }
@@ -329,13 +329,43 @@ void drawGame(
     }
   }
 
-// car
+  // car
   if (ResourceContainer.instance.carImage.isLoaded) {
-    final carImage = ResourceContainer.instance.carImage.image;
+    int calcCarDirection(double x0, double x1){
+      if(x1 < x0) return -1; // left
+      else if(x0 < x1) return 1; // right
+      else return 0;
+    }
+    final carDirection = calcCarDirection(bandList[0].x, bandList[3].x);
+
+    ImageContainer getCarImage(int carDirection) {
+      switch (carDirection) {
+        case 0:
+          return ResourceContainer.instance.carImage;
+        case -1:
+          return ResourceContainer.instance.carImageLeft;
+        case 1:
+          return ResourceContainer.instance.carImageRight;
+      }
+    }
+    final carImage = getCarImage(carDirection).image;
     canvas.drawImage(
         carImage,
         Offset(-carImage.width / 2.0, paintBounds.height/2.0 - carImage.height),
         Paint());
+
+    if (carDirection != 0) {
+      var slipImage;
+      if(timeInMilliseconds % 200 < 100){
+        slipImage = ResourceContainer.instance.carSlip0.image;
+      }else{
+        slipImage = ResourceContainer.instance.carSlip1.image;
+      }
+      canvas.drawImage(
+          slipImage,
+          Offset(-slipImage.width / 2.0, paintBounds.height/2.0 - slipImage.height),
+          Paint());
+    }
   }
 
   // time
