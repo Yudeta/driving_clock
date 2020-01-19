@@ -263,9 +263,9 @@ void drawGame(
       // draw road band
       var x0 = screenRoadEdge.x;
       var x1 = screenRoadCenter.x - (screenRoadEdge.x - screenRoadCenter.x);
+      var y1 = math.min(screenRoadCenter.y, paintBounds.height / 2.0);
       if (prevScreenY != -double.infinity) {
         var y0 = prevScreenY;
-        var y1 = screenRoadCenter.y;
         if (x1 < x0) {
           var tmp = x0;
           x0 = x1;
@@ -323,7 +323,7 @@ void drawGame(
       }
       prevScreenX0 = x0;
       prevScreenX1 = x1;
-      prevScreenY = screenRoadCenter.y;
+      prevScreenY = y1;
     } else {
       prevScreenY = -double.infinity;
     }
