@@ -348,7 +348,6 @@ void drawGame(
       }
     }
 
-    // TODO: 車とスリップ画像のサイズを画面比で記述して、画面サイズに左右されない表示にする。
     final carImage = getCarImage(carDirection).image;
 
     void drawSprite(ui.Image image, Offset positionLeftTop, Size size, Paint paint) {
