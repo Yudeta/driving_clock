@@ -229,8 +229,8 @@ void drawGame(
 
     // camera view coordinate
     final camviewRoadCenter = calcPositionFromWorldToCamera(camera, cameraRotation, worldRoadCenter);
-    final camviewRoadEdge = vector.Vector3(
-        camviewRoadCenter.x + roadWidth,
+    final camviewRoadLeftEdge = vector.Vector3(
+        camviewRoadCenter.x - roadWidth,
         camviewRoadCenter.y,
         camviewRoadCenter.z);
 
@@ -240,8 +240,8 @@ void drawGame(
           camviewRoadCenter,
           projectionPlaneDistance,
           screenHeight);
-      final screenRoadEdge = calcPositionFromCameraToScreen(
-          camviewRoadEdge,
+      final screenRoadLeftEdge = calcPositionFromCameraToScreen(
+          camviewRoadLeftEdge,
           projectionPlaneDistance,
           screenHeight);
 
@@ -261,21 +261,22 @@ void drawGame(
       }*/
 
       // draw road band
-      var x0 = screenRoadEdge.x;
-      var x1 = screenRoadCenter.x - (screenRoadEdge.x - screenRoadCenter.x);
+      var x0 = screenRoadLeftEdge.x;
+      var x1 = screenRoadCenter.x + (screenRoadCenter.x - screenRoadLeftEdge.x);
       var y1 = math.min(screenRoadCenter.y, paintBounds.height / 2.0);
       if (prevScreenY != -double.infinity) {
         var y0 = prevScreenY;
-        if (x1 < x0) {
-          var tmp = x0;
-          x0 = x1;
-          x1 = tmp;
-        }
-        if (y1 < y0) {
-          var tmp = y0;
-          y0 = y1;
-          y1 = tmp;
-        }
+        if(x0 <= x1 && y0 <= y1){
+//        if (x1 < x0) {
+//          var tmp = x0;
+//          x0 = x1;
+//          x1 = tmp;
+//        }
+//        if (y1 < y0) {
+//          var tmp = y0;
+//          y0 = y1;
+//          y1 = tmp;
+//        }
         if (ResourceContainer.instance.roadImage.isLoaded) {
 //          // 直方体で描画
 //          Rect destRect = Rect.fromLTRB(x0, y0, x1, y1+1);
@@ -319,6 +320,7 @@ void drawGame(
                   ResourceContainer.instance.roadImage.image, srcRect, destRect, p);
             }
           }
+        }
         }
       }
       prevScreenX0 = x0;
