@@ -350,11 +350,27 @@ void drawGame(
 
     // TODO: 車とスリップ画像のサイズを画面比で記述して、画面サイズに左右されない表示にする。
     final carImage = getCarImage(carDirection).image;
-    canvas.drawImage(
-        carImage,
-        Offset(
-            -carImage.width / 2.0, paintBounds.height / 2.0 - carImage.height),
-        Paint());
+
+    void drawSprite(ui.Image image, Offset positionLeftTop, Size size, Paint paint) {
+      Rect destRect = Rect.fromLTRB(
+          positionLeftTop.dx,
+          positionLeftTop.dy,
+          positionLeftTop.dx + size.width,
+          positionLeftTop.dy + size.height);
+
+      Rect srcRect = Rect.fromLTRB(0, 0, image.width.toDouble(), image.height.toDouble());
+
+      canvas.drawImageRect(image, srcRect, destRect, paint);
+    }
+
+    final carImageScaleOnScreen = 0.12;
+    final carImageSize = Size(
+        paintBounds.width * carImageScaleOnScreen,
+        carImage.height * (paintBounds.width * carImageScaleOnScreen) / carImage.width );
+    final carImagePosition = Offset(
+        -carImageSize.width,
+        paintBounds.height / 2.0 - carImageSize.height);
+    drawSprite(carImage, carImagePosition, carImageSize, Paint());
 
     if (carDirection != 0) {
       var slipImage;
@@ -363,11 +379,13 @@ void drawGame(
       } else {
         slipImage = ResourceContainer.instance.carSlip1.image;
       }
-      canvas.drawImage(
-          slipImage,
-          Offset(-slipImage.width / 2.0,
-              paintBounds.height / 2.0 - slipImage.height),
-          Paint());
+      final slipImageSize = Size(
+          paintBounds.width * carImageScaleOnScreen,
+          slipImage.height * (paintBounds.width * carImageScaleOnScreen) / slipImage.width );
+      final slipImagePosition = Offset(
+          -slipImageSize.width,
+          paintBounds.height / 2.0 - slipImageSize.height);
+      drawSprite(slipImage, slipImagePosition, slipImageSize, Paint());
     }
   }
 
