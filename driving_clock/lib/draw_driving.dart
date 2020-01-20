@@ -104,7 +104,7 @@ vector.Vector3 calcPositionFromCameraToScreen (
 
     // screen coordinate
     var screenRoadCenter = vector.Vector3(
-        persRoadCenter.x * screenHeight, -persRoadCenter.y * screenHeight, 0.0);
+        persRoadCenter.x * screenHeight, -persRoadCenter.y * screenHeight, persRoadCenter.z);
 
     return screenRoadCenter;
   }
@@ -161,6 +161,7 @@ void drawGame(
 
   var zCountMax = 16;
   var prevScreenY = -double.infinity;
+  var prevScreenZ = -double.infinity;
   var prevScreenX0 = -double.infinity;
   var prevScreenX1 = -double.infinity;
   var p = Paint();
@@ -263,30 +264,21 @@ void drawGame(
       // draw road band
       var x0 = screenRoadLeftEdge.x;
       var x1 = screenRoadCenter.x + (screenRoadCenter.x - screenRoadLeftEdge.x);
-      var y1 = math.min(screenRoadCenter.y, paintBounds.height / 2.0);
+      var y1;
+      var z1;
+      if (screenRoadCenter.y <= paintBounds.height / 2.0) {
+        y1 = screenRoadCenter.y;
+        z1 = screenRoadCenter.z;
+      } else {
+        y1 = paintBounds.height / 2.0;
+        // TODO: z1 calculation is probably not correct..
+        z1 = screenRoadCenter.z * (paintBounds.height / 2.0) / screenRoadCenter.y;
+      }
       if (prevScreenY != -double.infinity) {
         var y0 = prevScreenY;
-        if(x0 <= x1 && y0 <= y1){
-//        if (x1 < x0) {
-//          var tmp = x0;
-//          x0 = x1;
-//          x1 = tmp;
-//        }
-//        if (y1 < y0) {
-//          var tmp = y0;
-//          y0 = y1;
-//          y1 = tmp;
-//        }
-        if (ResourceContainer.instance.roadImage.isLoaded) {
-//          // 直方体で描画
-//          Rect destRect = Rect.fromLTRB(x0, y0, x1, y1+1);
-//          var textureIndex = zCount % 4;
-//          var textureY = (textureIndex <= 1) ? 0.0 : 40.0;
-//          Rect srcRect = Rect.fromLTRB(0, textureY, 400, textureY + 1.0);
-//          canvas.drawImageRect(
-//              ResourceContainer.instance.roadImage.image, srcRect, destRect, p);
-//
-          // 台形描画
+        var z0 = prevScreenZ;
+        if(x0 <= x1 && y0 <= y1 && ResourceContainer.instance.roadImage.isLoaded) {
+          // Draw trapezoid per band
           final bandProgressPer = (progressInZone % 250.0) / 250.0;
           final intY0 = y0.floor();
           final intY1 = y1.floor();
@@ -313,8 +305,16 @@ void drawGame(
               Rect destRect = Rect.fromLTRB(bandX0, bandY0, bandX1, bandY0+2); // TODO: +1だと縞模様になる。何故？destRectのBottomをPixel単位で正確な指定をする方法を調査
 
               final textureHeight = 64.0; //[pixel]
-//              var textureY = (textureHeight - 1.0) * bandPer;
-              var textureY = textureHeight * ((bandPer - bandProgressPer) % 0.99);
+              // calculate texture Y: linear interpolation by Y
+//              var textureY = textureHeight * ((bandPer - bandProgressPer) % 0.99);
+              // calculate texture Y: linear interpolation by reciprocal of Z
+              final bandZ = bandPer * (z1 - z0) + z0;
+              final invZ0 = 1.0 / z0;
+              final invZ1 = 1.0 / z1;
+              final invBandZ = 1.0 / bandZ;
+              final bandPerByZ = invBandZ / (invZ1 - invZ0);
+              final textureY = textureHeight * ((bandPerByZ - bandProgressPer) % 0.99);
+
               Rect srcRect = Rect.fromLTRB(0, textureY, 400, textureY + 0.01);
               canvas.drawImageRect(
                   ResourceContainer.instance.roadImage.image, srcRect, destRect, p);
@@ -326,8 +326,10 @@ void drawGame(
       prevScreenX0 = x0;
       prevScreenX1 = x1;
       prevScreenY = y1;
+      prevScreenZ = z1;
     } else {
       prevScreenY = -double.infinity;
+      prevScreenZ = -double.infinity;
     }
   }
 
