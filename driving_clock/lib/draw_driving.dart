@@ -145,7 +145,7 @@ void drawGame(
   // draw road
   var timeInMilliseconds = dateTime.second * 1000 + dateTime.millisecond;
 
-  var progressInZone = timeInMilliseconds.toDouble() * 1.0; //[meter]
+  var progressInZone = timeInMilliseconds.toDouble() * 2.0; //[meter]
   final progressInZoneMax = 60 * 1000;
   /*
   - 基本方針
@@ -229,10 +229,12 @@ void drawGame(
         ui.Paint()..color = ui.Color.fromARGB(255, 70, 198, 49));
   }
 
-  for (var zCount = zCountMax - 1; 0 <= zCount; zCount--) {
-    // band毎の処理
-    final roadWidth = 200.0;
+  // Draw each band
+  final roadWidth = 200.0;
+  final bandLengthZ = farRoadDistance / zCountMax; // [m]
+  final driveTimeInBand = 250.0; // [msec]
 
+  for (var zCount = zCountMax - 1; 0 <= zCount; zCount--) {
     // world coordinate
     final worldRoadCenter = bandList[zCount];
 
@@ -271,8 +273,7 @@ void drawGame(
             y0 <= y1 &&
             ResourceContainer.instance.roadImage.isLoaded) {
           // Draw trapezoid per band
-          final scrorllTimeInBand = 250.0; // [sec]
-          final bandProgressPer = (progressInZone % scrorllTimeInBand) / scrorllTimeInBand;
+          final bandProgressPer = (progressInZone % driveTimeInBand) / driveTimeInBand;
           final intY0 = y0.floor();
           final intY1 = y1.floor();
           if (intY0 <= intY1) {
@@ -336,7 +337,88 @@ void drawGame(
     }
   }
 
-  // car
+  // time
+  final hour = intl.DateFormat(is24HourFormat ? 'HH' : 'hh').format(dateTime);
+  final minute = intl.DateFormat('mm').format(dateTime);
+  final second = intl.DateFormat('ss').format(dateTime);
+  final timeText = hour + ":" + minute + ":" + second;
+  // fixed position
+  var textSize = 12.0;
+  TextSpan span = new TextSpan(
+      style: new TextStyle(
+        color: Colors.red,
+        fontWeight: FontWeight.bold,
+        fontSize: textSize,
+      ),
+      text: timeText);
+  TextPainter tp = new TextPainter(
+      text: span, textAlign: TextAlign.right, textDirection: TextDirection.ltr);
+  tp.layout();
+  tp.paint(
+      canvas, new Offset(-paintBounds.width / 2.0, -paintBounds.height / 4.0));
+
+  void _drawSprite(ui.Image image, Offset positionLeftTop, Size size, Paint paint) {
+    Rect destRect = Rect.fromLTRB(
+        positionLeftTop.dx,
+        positionLeftTop.dy,
+        positionLeftTop.dx + size.width,
+        positionLeftTop.dy + size.height);
+    Rect srcRect = Rect.fromLTRB(0, 0, image.width.toDouble(), image.height.toDouble());
+    canvas.drawImageRect(image, srcRect, destRect, paint);
+  }
+
+  // Object utility
+  vector.Vector3 calcObjectPositionOnRoad(double targetZ) {
+    int findBand(double z){
+      for (var i = 0; i < zCountMax - 1; i++) {
+        if(z <= bandList[i].z){
+          return i;
+        }
+      }
+      return -1;
+    }
+    final bandIndex = findBand(targetZ);
+    if(0 <= bandIndex){
+      final roadPosition1 = bandList[bandIndex];
+      final roadPosition2 = bandList[bandIndex + 1];
+      final per = (targetZ - roadPosition1.z) / (roadPosition2.z - roadPosition1.z);
+      final roadPosition = roadPosition2 * per + roadPosition1 * (1.0 - per);
+      return roadPosition;
+    }
+    return vector.Vector3.zero();
+  }
+
+  // Rival car
+  if (ResourceContainer.instance.rivalCarImage.isLoaded) {
+    vector.Vector3 generateRivalCar(double progressInZone) {
+      final rivalCarZPer = ((progressInZone / 2) % 5000.0) / 5000.0;
+      final rivalCarZ = farRoadDistance * (1.0 - rivalCarZPer);
+      return calcObjectPositionOnRoad(rivalCarZ);
+    }
+    final worldRivalCarPosition = generateRivalCar(progressInZone);
+
+    // camera view coordinate
+    final camviewRivalCarPosition =
+    calcPositionFromWorldToCamera(camera, cameraRotation, worldRivalCarPosition);
+    if (0 < camviewRivalCarPosition.z) {
+      // screen view coordinate
+      final screenRivalCarPosition = calcPositionFromCameraToScreen(
+          camviewRivalCarPosition, projectionPlaneDistance, screenHeight);
+
+      final carImage = ResourceContainer.instance.rivalCarImage.image;
+
+      final carImageScaleOnScreen = 20.0 / camviewRivalCarPosition.z;
+      final carImageSize = Size(
+          paintBounds.width * carImageScaleOnScreen,
+          carImage.height * (paintBounds.width * carImageScaleOnScreen) / carImage.width );
+      final carImagePosition = Offset(
+          screenRivalCarPosition.x - carImageSize.width * 0.5,
+          screenRivalCarPosition.y - carImageSize.height * 0.8);
+      _drawSprite(carImage, carImagePosition, carImageSize, Paint());
+    }
+  }
+
+  // My car
   if (ResourceContainer.instance.carImage.isLoaded &&
       ResourceContainer.instance.carImageLeft.isLoaded &&
       ResourceContainer.instance.carImageRight.isLoaded &&
@@ -366,63 +448,46 @@ void drawGame(
 
     final carImage = getCarImage(carDirection).image;
 
-    void drawSprite(ui.Image image, Offset positionLeftTop, Size size, Paint paint) {
-      Rect destRect = Rect.fromLTRB(
-          positionLeftTop.dx,
-          positionLeftTop.dy,
-          positionLeftTop.dx + size.width,
-          positionLeftTop.dy + size.height);
+    final worldMyCarPositionZPer = 0.9;
+    final worldMyCarPosition = bandList[1] * worldMyCarPositionZPer + bandList[2] * (1.0 - worldMyCarPositionZPer);
 
-      Rect srcRect = Rect.fromLTRB(0, 0, image.width.toDouble(), image.height.toDouble());
+    // camera view coordinate
+    final camviewMyCarPosition =
+    calcPositionFromWorldToCamera(camera, cameraRotation, worldMyCarPosition);
+    if (0 < camviewMyCarPosition.z) {
+      // screen view coordinate
+      final screenMyCarPosition = calcPositionFromCameraToScreen(
+          camviewMyCarPosition, projectionPlaneDistance, screenHeight);
 
-      canvas.drawImageRect(image, srcRect, destRect, paint);
-    }
-
-    final carImageScaleOnScreen = 0.12;
-    final carImageSize = Size(
-        paintBounds.width * carImageScaleOnScreen,
-        carImage.height * (paintBounds.width * carImageScaleOnScreen) / carImage.width );
-    final carImagePosition = Offset(
-        -carImageSize.width,
-        paintBounds.height / 2.0 - carImageSize.height);
-    drawSprite(carImage, carImagePosition, carImageSize, Paint());
-
-    if (carDirection != 0) {
-      var slipImage;
-      if (timeInMilliseconds % 200 < 100) {
-        slipImage = ResourceContainer.instance.carSlip0.image;
-      } else {
-        slipImage = ResourceContainer.instance.carSlip1.image;
-      }
-      final slipImageSize = Size(
+      final carImageScaleOnScreen = 20.0 / camviewMyCarPosition.z;
+      final carImageSize = Size(
           paintBounds.width * carImageScaleOnScreen,
-          slipImage.height * (paintBounds.width * carImageScaleOnScreen) / slipImage.width );
-      final slipImagePosition = Offset(
-          -slipImageSize.width,
-          paintBounds.height / 2.0 - slipImageSize.height);
-      drawSprite(slipImage, slipImagePosition, slipImageSize, Paint());
+          carImage.height * (paintBounds.width * carImageScaleOnScreen) / carImage.width );
+      final carImagePosition = Offset(
+          screenMyCarPosition.x - carImageSize.width * 0.5,
+          screenMyCarPosition.y - carImageSize.height * 0.8);
+      _drawSprite(carImage, carImagePosition, carImageSize, Paint());
+
+      // Draw Slip
+      if (carDirection != 0) {
+        var slipImage;
+        if (timeInMilliseconds % 200 < 100) {
+          slipImage = ResourceContainer.instance.carSlip0.image;
+        } else {
+          slipImage = ResourceContainer.instance.carSlip1.image;
+        }
+        final slipImageSize = Size(
+            paintBounds.width * carImageScaleOnScreen,
+            slipImage.height * (paintBounds.width * carImageScaleOnScreen) / slipImage.width );
+        final slipImagePosition = Offset(
+            screenMyCarPosition.x - slipImageSize.width * 0.5,
+            carImagePosition.dy + carImageSize.height - slipImageSize.height);
+        _drawSprite(slipImage, slipImagePosition, slipImageSize, Paint());
+      }
     }
   }
 
-  // time
-  final hour = intl.DateFormat(is24HourFormat ? 'HH' : 'hh').format(dateTime);
-  final minute = intl.DateFormat('mm').format(dateTime);
-  final second = intl.DateFormat('ss').format(dateTime);
-  final timeText = hour + ":" + minute + ":" + second;
-  // fixed position
-  var textSize = 12.0;
-  TextSpan span = new TextSpan(
-      style: new TextStyle(
-        color: Colors.red,
-        fontWeight: FontWeight.bold,
-        fontSize: textSize,
-      ),
-      text: timeText);
-  TextPainter tp = new TextPainter(
-      text: span, textAlign: TextAlign.right, textDirection: TextDirection.ltr);
-  tp.layout();
-  tp.paint(
-      canvas, new Offset(-paintBounds.width / 2.0, -paintBounds.height / 4.0));
+
 
 //  // draw time on the road
 //  if(0.0 < timeBoardScale){

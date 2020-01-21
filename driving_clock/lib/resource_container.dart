@@ -46,6 +46,9 @@ class ResourceContainer {
   ImageContainer carImageRight;
   ImageContainer carSlip0;
   ImageContainer carSlip1;
+  ImageContainer rivalCarImage;
+  ImageContainer rivalCarImageLeft;
+  ImageContainer rivalCarImageRight;
   ImageContainer roadImage;
 
   void load(){
@@ -61,6 +64,12 @@ class ResourceContainer {
     carSlip0.load();
     carSlip1 = ImageContainer(name:"images/slip1.png");
     carSlip1.load();
+    rivalCarImage = ImageContainer(name:"images/img_car2.png");
+    rivalCarImage.load();
+    rivalCarImageLeft = ImageContainer(name:"images/img_car2_left.png");
+    rivalCarImageLeft.load();
+    rivalCarImageRight = ImageContainer(name:"images/img_car2_right.png");
+    rivalCarImageRight.load();
     roadImage = ImageContainer(name:"images/road0.png");
     roadImage.load();
   }

@@ -52,6 +52,9 @@ flutter:
     - images/car.png
     - images/img_car1_left.png
     - images/img_car1_right.png
+    - images/img_car2.png
+    - images/img_car2_left.png
+    - images/img_car2_right.png
     - images/slip0.png
     - images/slip1.png
     - images/road0.png
