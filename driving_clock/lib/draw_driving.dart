@@ -404,17 +404,36 @@ void drawGame(
 
       // Time
       var textSize = carImageSize.height * 0.8;
+      final fontColor = ui.Color.fromARGB(255, 231, 213, 212);
+      final outlineColor = ui.Color.fromARGB(255, 58, 41, 31);
       TextSpan span = new TextSpan(
           style: new TextStyle(
-            color: Colors.white,
+            color: fontColor,
             fontWeight: FontWeight.bold,
             fontSize: textSize,
+            shadows: [
+              Shadow(
+                blurRadius: 2.0,
+                color: outlineColor,
+                offset: Offset(-1.0, 0.0),
+              ),
+              Shadow(
+                blurRadius: 2.0,
+                color: outlineColor,
+                offset: Offset(1.0, 0.0),
+              ),
+              Shadow(
+                blurRadius: 2.0,
+                color: outlineColor,
+                offset: Offset(0.0, 1.0),
+              ),
+            ],
           ),
           text: timeText);
       TextPainter tp = new TextPainter(
           text: span, textAlign: TextAlign.right, textDirection: TextDirection.ltr);
       tp.layout();
-      tp.paint(canvas, new Offset(screenRivalCarPosition.x - tp.width * 0.5, carImagePosition.dy - tp.height * 0.6));
+      tp.paint(canvas, new Offset(screenRivalCarPosition.x - tp.width * 0.5, carImagePosition.dy - tp.height * 1.1));
     }
   }
 
