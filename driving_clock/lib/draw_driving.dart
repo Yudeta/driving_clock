@@ -65,13 +65,13 @@ List generateRoad(int bandNum, double bandLength, double progressInZone) {
   double calcVanishingPointX2(double progress, double progressMax) {
     if (progress < 2000.0) {
       final progressPer = (progress - 0.0) / 2000.0;
-      return math.sin(0.5 * math.pi * progressPer) * 3000.0;
+      return -math.sin(0.5 * math.pi * progressPer) * 3000.0;
     } else if (progress < 4000.0) {
       final progressPer = (progress - 2000.0) / 2000.0;
-      return math.sin(0.5 * math.pi * (1.0 - progressPer)) * 3000.0;
+      return -math.sin(0.5 * math.pi * (1.0 - progressPer)) * 3000.0;
     } else if (progress < 5000.0) {
       final progressPer = (progress - 4000.0) / 1000.0;
-      return -math.sin(math.pi * progressPer) * 1000.0;
+      return math.sin(math.pi * progressPer) * 1000.0;
     }
     return 0.0;
   }
@@ -212,6 +212,8 @@ void drawGame(
 
       if(gameParameters.skyOffset < -widthOnScreen){
         gameParameters.skyOffset += widthOnScreen;
+      }else if(0.0 < gameParameters.skyOffset){
+        gameParameters.skyOffset -= widthOnScreen;
       }
 
       Rect srcRect = Rect.fromLTRB(
