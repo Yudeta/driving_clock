@@ -226,7 +226,7 @@ void drawGame(
     canvas.drawRect(
         ui.Rect.fromLTRB(-paintBounds.width / 2.0, skylineY,
             paintBounds.width / 2.0, paintBounds.height),
-        ui.Paint()..color = ui.Color.fromARGB(255, 70, 198, 49));
+        ui.Paint()..color = ui.Color.fromARGB(255, 171, 112, 73));
   }
 
   // Draw each band
