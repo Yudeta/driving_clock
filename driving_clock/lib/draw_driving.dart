@@ -59,6 +59,9 @@ List generateRoad(int bandNum, double bandLength, double progressInZone) {
     } else if (progress < 4000.0) {
       final progressPer = (progress - 2000.0) / 2000.0;
       return math.sin(0.5 * math.pi * (1.0 - progressPer)) * 3000.0;
+    } else if (progress < 5000.0) {
+      final progressPer = (progress - 4000.0) / 1000.0;
+      return -math.sin(math.pi * progressPer) * 1000.0;
     }
     return 0.0;
   }
@@ -80,9 +83,9 @@ List generateRoad(int bandNum, double bandLength, double progressInZone) {
         }else{
           final zPer = ((i - 1) / (bandNum - 1 - 1));
           // uphill
-//          return calcEaseInOutWave(zPer) * hillHeight * hillTween;
+          return calcEaseInOutWave(zPer) * hillHeight * hillTween;
           // downhill
-          return math.sin(math.pi * (zPer)) * hillHeight * hillTween;
+//          return math.sin(math.pi * (zPer)) * hillHeight * hillTween;
         }
       } else {
         return 0.0;
@@ -142,7 +145,7 @@ void drawGame(
   // draw road
   var timeInMilliseconds = dateTime.second * 1000 + dateTime.millisecond;
 
-  var progressInZone = timeInMilliseconds.toDouble() * 0.5; //[meter]
+  var progressInZone = timeInMilliseconds.toDouble() * 1.0; //[meter]
   final progressInZoneMax = 60 * 1000;
   /*
   - 基本方針
