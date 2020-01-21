@@ -279,8 +279,7 @@ void drawGame(
                   bandX0,
                   bandY0,
                   bandX1,
-                  bandY0 +
-                      2); // TODO: +1だと縞模様になる。何故？destRectのBottomをPixel単位で正確な指定をする方法を調査
+                  bandY0 + 1);
 
               final textureHeight = 64.0; //[pixel]
               // calculate texture Y: linear interpolation by Y
