@@ -38,13 +38,18 @@ class DrawnDriving extends StatelessWidget {
 }
 
 class GameParameters {
+  static const roadWidth = 200.0;
+
   double skyOffset;
-  GameParameters(double skyOffset){
+  int rivalIndex;
+
+  GameParameters(double skyOffset, int rivalIndex){
     this.skyOffset = skyOffset;
+    this.rivalIndex = rivalIndex;
   }
 }
 
-var gameParameters = GameParameters(0.0);
+var gameParameters = GameParameters(0.0, 0);
 
 
 List generateRoad(int bandNum, double bandLength, double progressInZone) {
@@ -246,8 +251,8 @@ void drawGame(
   }
 
   // Draw each band
+  final roadWidth = GameParameters.roadWidth;
   final fieldColor = ui.Color.fromARGB(255, 171, 112, 73);
-  final roadWidth = 200.0;
   final bandLengthZ = farRoadDistance / zCountMax; // [m]
   final driveTimeInBand = 250.0; // [msec]
 
@@ -400,14 +405,25 @@ void drawGame(
 
   // Rival car
   if (ResourceContainer.instance.rivalCarImage.isLoaded) {
+    final rivalCarSpeedScale = 0.5;
+    final rivalCarTime = 5000.0;
+    gameParameters.rivalIndex = (((progressInZone * rivalCarSpeedScale) / rivalCarTime).floor()) % 2;
     vector.Vector3 generateRivalCar(double progressInZone) {
-      final rivalCarZPer = ((progressInZone / 2) % 5000.0) / 5000.0;
+      final rivalCarZPer = ((progressInZone * rivalCarSpeedScale) % rivalCarTime) / rivalCarTime;
       final rivalCarZ = farRoadDistance * (1.0 - rivalCarZPer);
       return calcObjectPositionOnRoad(rivalCarZ);
     }
-    final worldRivalCarPosition = generateRivalCar(progressInZone);
+    final worldRivalCarPositionCenter = generateRivalCar(progressInZone);
+    final rivalCarOffsetX = (gameParameters.rivalIndex * 2 - 1) * GameParameters.roadWidth * 0.6;
+    final worldRivalCarPosition = vector.Vector3(
+        worldRivalCarPositionCenter.x + rivalCarOffsetX,
+        worldRivalCarPositionCenter.y,
+        worldRivalCarPositionCenter.z
+    );
 
     // camera view coordinate
+//    final camviewRoadLeftEdge = vector.Vector3(camviewRoadCenter.x - roadWidth,
+//        camviewRoadCenter.y, camviewRoadCenter.z);
     final camviewRivalCarPosition =
     calcPositionFromWorldToCamera(camera, cameraRotation, worldRivalCarPosition);
     if (0 < camviewRivalCarPosition.z) {
