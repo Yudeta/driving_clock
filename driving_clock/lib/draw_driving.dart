@@ -37,6 +37,16 @@ class DrawnDriving extends StatelessWidget {
   }
 }
 
+class GameParameters {
+  double skyOffset;
+  GameParameters(double skyOffset){
+    this.skyOffset = skyOffset;
+  }
+}
+
+var gameParameters = GameParameters(0.0);
+
+
 List generateRoad(int bandNum, double bandLength, double progressInZone) {
   var bandList = List(bandNum);
 
@@ -83,9 +93,9 @@ List generateRoad(int bandNum, double bandLength, double progressInZone) {
         }else{
           final zPer = ((i - 1) / (bandNum - 1 - 1));
           // uphill
-//          return calcEaseInOutWave(zPer) * hillHeight * hillTween;
+          return calcEaseInOutWave(zPer) * hillHeight * hillTween;
           // downhill
-          return math.sin(math.pi * (zPer)) * hillHeight * hillTween;
+//          return math.sin(math.pi * (zPer)) * hillHeight * hillTween;
         }
       } else {
         return 0.0;
@@ -142,7 +152,6 @@ void drawGame(
   canvas.save();
   canvas.translate(paintBounds.width / 2.0, paintBounds.height / 2.0);
 
-  // draw road
   var timeInMilliseconds = dateTime.second * 1000 + dateTime.millisecond;
 
   var progressInZone = timeInMilliseconds.toDouble() * 2.0; //[meter]
@@ -184,13 +193,53 @@ void drawGame(
 
     // draw sky
     if (ResourceContainer.instance.skyImage.isLoaded) {
-      Rect srcRect = Rect.fromLTRB(0, 0, 1130 * 3 / 4, 322);
-      double imageHeightOnScreen =
-          paintBounds.width * srcRect.bottom / srcRect.right;
-      Rect destRect = Rect.fromLTRB(-paintBounds.width / 2.0,
-          skylineY - imageHeightOnScreen, paintBounds.width / 2.0, skylineY);
-      canvas.drawImageRect(ResourceContainer.instance.skyImage.image, srcRect,
-          destRect, Paint());
+      final skyImage = ResourceContainer.instance.skyImage.image;
+      //Rect srcRect = Rect.fromLTRB(0, 0, 1130 * 3 / 4, 322);
+      //gameParameters.skyOffset // -paintBounds.width .. 0.0
+
+      Rect skyArea = Rect.fromLTRB(
+          -paintBounds.width * 0.5, -paintBounds.height * 0.5,
+          paintBounds.width * 0.5, skylineY);
+      // Base ratio -> skyImage.height * 0.75 : paintBounds.height * 0.5
+
+      // skyArea.height : paintBounds.height * 0.5 = y : skyImage.height * 0.75
+      // y = skyArea.height * skyImage.height * 0.75 / (paintBounds.height * 0.5)
+      final heightOnImage = skyArea.height * (skyImage.height * 0.75) / (paintBounds.height * 0.5);
+      // w : skyImage.height * 0.75 = paintBounds.width : paintBounds.height * 0.5
+      final widthOnImage = (skyImage.height * 0.75) * paintBounds.width / (paintBounds.height * 0.5);
+      // w : paintBounds.height * 0.5 = skyImage.width : heightOnImage
+      final widthOnScreen = (paintBounds.height * 0.5) * skyImage.width / (skyImage.height * 0.75);
+
+      if(gameParameters.skyOffset < -widthOnScreen){
+        gameParameters.skyOffset += widthOnScreen;
+      }
+
+      Rect srcRect = Rect.fromLTRB(
+          0,
+          skyImage.height - heightOnImage,
+          skyImage.width.toDouble(),
+          skyImage.height.toDouble());
+      for(var i=0;i<2;i++) {
+        final screenX = gameParameters.skyOffset - paintBounds.width * 0.5 + widthOnScreen * i;
+        if(screenX < paintBounds.width * 0.5) {
+          Rect destRect = Rect.fromLTRB(
+              screenX, -paintBounds.height * 0.5,
+              screenX + widthOnScreen, skylineY);
+          canvas.drawImageRect(skyImage, srcRect, destRect, Paint());
+        }
+      }
+
+//      Rect srcRect = Rect.fromLTRB(
+//          0,
+//          skyImage.height - imageHeight,
+//          imageWidth,
+//          skyImage.height.toDouble());
+//
+//      Rect destRect = Rect.fromLTRB(
+//          gameParameters.skyOffset - paintBounds.width * 0.5, -paintBounds.height * 0.5,
+//          gameParameters.skyOffset + paintBounds.width * 0.5, skylineY);
+
+//      canvas.drawImageRect(skyImage, srcRect, destRect, Paint());
     }
   }
 
@@ -460,8 +509,15 @@ void drawGame(
           screenMyCarPosition.y - carImageSize.height * 0.8);
       _drawSprite(carImage, carImagePosition, carImageSize, Paint());
 
-      // Draw Slip
       if (carDirection != 0) {
+        // Update sky offset
+        if(carDirection < 0.0) {
+          gameParameters.skyOffset += 2.0;
+        } else{
+          gameParameters.skyOffset -= 2.0;
+        }
+
+        // Draw Slip
         var slipImage;
         if (timeInMilliseconds % 200 < 100) {
           slipImage = ResourceContainer.instance.carSlip0.image;
