@@ -83,9 +83,9 @@ List generateRoad(int bandNum, double bandLength, double progressInZone) {
         }else{
           final zPer = ((i - 1) / (bandNum - 1 - 1));
           // uphill
-          return calcEaseInOutWave(zPer) * hillHeight * hillTween;
+//          return calcEaseInOutWave(zPer) * hillHeight * hillTween;
           // downhill
-//          return math.sin(math.pi * (zPer)) * hillHeight * hillTween;
+          return math.sin(math.pi * (zPer)) * hillHeight * hillTween;
         }
       } else {
         return 0.0;
@@ -147,34 +147,6 @@ void drawGame(
 
   var progressInZone = timeInMilliseconds.toDouble() * 2.0; //[meter]
   final progressInZoneMax = 60 * 1000;
-  /*
-  - 基本方針
-    - 可視コースの形状をZ方向に16分割、分割したBand毎にpixel単位で描画する。
-    - テクスチャスクロールで走行を表現。
-    - コース形状の変形と、テクスチャスクロールが独立して動く、擬似3D。これによりスピード感を出す。
-      - １つのカーブに対して、現実よりもスクロールが長い（速くても曲がり切ることはない）
-  * */
-  /*
-    - Zone: １つの風景が続く範囲。１分。
-      - ゾーン内の進行距離: 60秒 * 1000msec = 60000msec
-    - dateTimeを元に、distanceInZonne[dist=独自単位] を計算
-      - distanceInZone から、コースの形状決定
-  * */
-
-/*
-      - cameraY = カメラの高さ
-      - 現在地点〜消失点までの距離で以下の処理
-          - camera viewのZ位置 = globalでのコース位置 - 自車位置
-          - camera viewのコース向き = globalでのコース向き - 自車向き
-          - 地面高さ = 0（とりあえず。これを上下してコースの高低差を表現できるか？）
-          - 透視投影でX,Y計算
-              - X = (道幅 - cameraX) / Z
-              - Y = (地面高さ - cameraY) / Z
-* */
-
-  double skylineY = -double.infinity;
-  vector.Vector3 timeBoardPosition;
-  double timeBoardScale = -double.infinity;
 
   final projectionPlaneDistance = 1.0;
   final screenHeight = paintBounds.height / 2.0;
@@ -208,7 +180,7 @@ void drawGame(
     final screenVanishingPoint = calcPositionFromCameraToScreen(
         cameraViewVanishingPoint, projectionPlaneDistance, screenHeight);
 
-    skylineY = screenVanishingPoint.y;
+    double skylineY = screenVanishingPoint.y;
 
     // draw sky
     if (ResourceContainer.instance.skyImage.isLoaded) {
@@ -220,16 +192,10 @@ void drawGame(
       canvas.drawImageRect(ResourceContainer.instance.skyImage.image, srcRect,
           destRect, Paint());
     }
-
-    // TODO: 道路に合わせて描画する必要がある
-    // draw green ground
-    canvas.drawRect(
-        ui.Rect.fromLTRB(-paintBounds.width / 2.0, skylineY,
-            paintBounds.width / 2.0, paintBounds.height),
-        ui.Paint()..color = ui.Color.fromARGB(255, 171, 112, 73));
   }
 
   // Draw each band
+  final fieldColor = ui.Color.fromARGB(255, 171, 112, 73);
   final roadWidth = 200.0;
   final bandLengthZ = farRoadDistance / zCountMax; // [m]
   final driveTimeInBand = 250.0; // [msec]
@@ -275,7 +241,15 @@ void drawGame(
           // Draw trapezoid per band
           final bandProgressPer = (progressInZone % driveTimeInBand) / driveTimeInBand;
           final intY0 = y0.floor();
-          final intY1 = y1.floor();
+          final intY1 = y1.ceil();
+
+          // field
+          canvas.drawRect(
+              ui.Rect.fromLTRB(-paintBounds.width / 2.0, intY0.toDouble(),
+                  paintBounds.width / 2.0, intY1.toDouble()),
+              ui.Paint()..color = fieldColor);
+
+          // road
           if (intY0 <= intY1) {
             final bandHeight = intY1 - intY0 + 1;
             for (var y = 0; y < bandHeight; y++) {
@@ -437,7 +411,6 @@ void drawGame(
     }
   }
 
-
   // My car
   if (ResourceContainer.instance.carImage.isLoaded &&
       ResourceContainer.instance.carImageLeft.isLoaded &&
@@ -506,52 +479,6 @@ void drawGame(
       }
     }
   }
-
-
-
-//  // draw time on the road
-//  if(0.0 < timeBoardScale){
-//    var textSize = timeBoardScale;
-//    TextSpan span = new TextSpan(
-//        style: new TextStyle(
-//          color: Colors.red,
-//          fontWeight: FontWeight.bold,
-//          fontSize: textSize,
-//        ),
-//        text: timeText);
-//    TextPainter tp = new TextPainter(
-//        text: span,
-//        textAlign: TextAlign.right,
-//        textDirection: TextDirection.ltr);
-//    tp.layout();
-//    tp.paint(canvas, new Offset(timeBoardPosition.x, timeBoardPosition.y));
-//
-//  }
-/*
-  // draw time temporarily
-  if(skylineY != -double.infinity) {
-    var timeBoardPer = (timeInMilliseconds - dateTime.second * 1000) / 1000.0;
-    timeBoardPer = timeBoardPer * timeBoardPer;
-
-    var timeBoardY = timeBoardPer * (paintBounds.height - skylineY) + skylineY;
-    double perDelay = timeBoardPer * 0.8;
-    var centerX = targetX * (1.0 - math.sin(perDelay * math.pi / 2.0));
-    var textSize = timeBoardPer * 35 + 5;
-    TextSpan span = new TextSpan(
-        style: new TextStyle(
-          color: Colors.blue,
-          fontWeight: FontWeight.normal,
-          fontSize: textSize,
-        ),
-        text: timeText);
-    TextPainter tp = new TextPainter(
-        text: span,
-        textAlign: TextAlign.center,
-        textDirection: TextDirection.ltr);
-    tp.layout();
-    centerX -= tp.width / 2.0;
-    tp.paint(canvas, new Offset(centerX, timeBoardY));
-  }*/
 
   canvas.restore();
 }
