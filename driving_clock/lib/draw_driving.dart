@@ -372,22 +372,7 @@ void drawGame(
   // time
   final hour = intl.DateFormat(is24HourFormat ? 'HH' : 'hh').format(dateTime);
   final minute = intl.DateFormat('mm').format(dateTime);
-  final second = intl.DateFormat('ss').format(dateTime);
-  final timeText = hour + ":" + minute + ":" + second;
-//  // fixed position
-//  var textSize = 12.0;
-//  TextSpan span = new TextSpan(
-//      style: new TextStyle(
-//        color: Colors.red,
-//        fontWeight: FontWeight.bold,
-//        fontSize: textSize,
-//      ),
-//      text: timeText);
-//  TextPainter tp = new TextPainter(
-//      text: span, textAlign: TextAlign.right, textDirection: TextDirection.ltr);
-//  tp.layout();
-//  tp.paint(
-//      canvas, new Offset(-paintBounds.width / 2.0, -paintBounds.height / 4.0));
+  final timeText = hour + ":" + minute;
 
   // Rival car
   if (ResourceContainer.instance.rivalCarImage.isLoaded) {
