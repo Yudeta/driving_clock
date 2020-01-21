@@ -325,7 +325,7 @@ void drawGame(
 
   vector.Vector3 calcObjectPositionOnRoad(double targetZ) {
     int findBand(double z){
-      for (var i = 0; i < zCountMax - 1; i++) {
+      for (var i = 1; i < zCountMax; i++) {
         if(z <= bandList[i].z){
           return i;
         }
@@ -334,8 +334,8 @@ void drawGame(
     }
     final bandIndex = findBand(targetZ);
     if(0 <= bandIndex){
-      final roadPosition1 = bandList[bandIndex];
-      final roadPosition2 = bandList[bandIndex + 1];
+      final roadPosition1 = bandList[bandIndex - 1];
+      final roadPosition2 = bandList[bandIndex];
       final per = (targetZ - roadPosition1.z) / (roadPosition2.z - roadPosition1.z);
       final roadPosition = roadPosition2 * per + roadPosition1 * (1.0 - per);
       return roadPosition;
