@@ -337,26 +337,8 @@ void drawGame(
     }
   }
 
-  // time
-  final hour = intl.DateFormat(is24HourFormat ? 'HH' : 'hh').format(dateTime);
-  final minute = intl.DateFormat('mm').format(dateTime);
-  final second = intl.DateFormat('ss').format(dateTime);
-  final timeText = hour + ":" + minute + ":" + second;
-  // fixed position
-  var textSize = 12.0;
-  TextSpan span = new TextSpan(
-      style: new TextStyle(
-        color: Colors.red,
-        fontWeight: FontWeight.bold,
-        fontSize: textSize,
-      ),
-      text: timeText);
-  TextPainter tp = new TextPainter(
-      text: span, textAlign: TextAlign.right, textDirection: TextDirection.ltr);
-  tp.layout();
-  tp.paint(
-      canvas, new Offset(-paintBounds.width / 2.0, -paintBounds.height / 4.0));
 
+  // Object utility
   void _drawSprite(ui.Image image, Offset positionLeftTop, Size size, Paint paint) {
     Rect destRect = Rect.fromLTRB(
         positionLeftTop.dx,
@@ -367,7 +349,6 @@ void drawGame(
     canvas.drawImageRect(image, srcRect, destRect, paint);
   }
 
-  // Object utility
   vector.Vector3 calcObjectPositionOnRoad(double targetZ) {
     int findBand(double z){
       for (var i = 0; i < zCountMax - 1; i++) {
@@ -387,6 +368,26 @@ void drawGame(
     }
     return vector.Vector3.zero();
   }
+
+  // time
+  final hour = intl.DateFormat(is24HourFormat ? 'HH' : 'hh').format(dateTime);
+  final minute = intl.DateFormat('mm').format(dateTime);
+  final second = intl.DateFormat('ss').format(dateTime);
+  final timeText = hour + ":" + minute + ":" + second;
+//  // fixed position
+//  var textSize = 12.0;
+//  TextSpan span = new TextSpan(
+//      style: new TextStyle(
+//        color: Colors.red,
+//        fontWeight: FontWeight.bold,
+//        fontSize: textSize,
+//      ),
+//      text: timeText);
+//  TextPainter tp = new TextPainter(
+//      text: span, textAlign: TextAlign.right, textDirection: TextDirection.ltr);
+//  tp.layout();
+//  tp.paint(
+//      canvas, new Offset(-paintBounds.width / 2.0, -paintBounds.height / 4.0));
 
   // Rival car
   if (ResourceContainer.instance.rivalCarImage.isLoaded) {
@@ -415,8 +416,23 @@ void drawGame(
           screenRivalCarPosition.x - carImageSize.width * 0.5,
           screenRivalCarPosition.y - carImageSize.height * 0.8);
       _drawSprite(carImage, carImagePosition, carImageSize, Paint());
+
+      // Time
+      var textSize = carImageSize.height * 0.8;
+      TextSpan span = new TextSpan(
+          style: new TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: textSize,
+          ),
+          text: timeText);
+      TextPainter tp = new TextPainter(
+          text: span, textAlign: TextAlign.right, textDirection: TextDirection.ltr);
+      tp.layout();
+      tp.paint(canvas, new Offset(screenRivalCarPosition.x - tp.width * 0.5, carImagePosition.dy - tp.height * 0.6));
     }
   }
+
 
   // My car
   if (ResourceContainer.instance.carImage.isLoaded &&
