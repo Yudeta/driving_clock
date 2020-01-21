@@ -52,22 +52,43 @@ List generateRoad(int bandNum, double bandLength, double progressInZone) {
     }
     return 0.0;
   }
+  double calcVanishingPointX2(double progress, double progressMax) {
+    if (progress < 2000.0) {
+      final progressPer = (progress - 0.0) / 2000.0;
+      return math.sin(0.5 * math.pi * progressPer) * 3000.0;
+    } else if (progress < 4000.0) {
+      final progressPer = (progress - 2000.0) / 2000.0;
+      return math.sin(0.5 * math.pi * (1.0 - progressPer)) * 3000.0;
+    }
+    return 0.0;
+  }
 
   final progress = progressInZone % 6000.0;
-  final vanishingPointX = calcVanishingPointX(progress, 6000.0);
+  final vanishingPointX = calcVanishingPointX2(progress, 6000.0);
 
   for (var i = 0; i < bandNum; i++) {
-    double calcRoadY(double bandZ) {
-      if (bandZ < 2000.0) {
-        return math.sin(math.pi * 2.0 * (bandZ / 2000.0)) * 30.0;
+    double calcEaseInOutWave(double per) {
+        return (math.sin(math.pi * (per - 0.5)) + 1.0) * 0.5;
+    }
+    double calcRoadY(double baseProgress, int i, int bandNum) {
+      if (baseProgress < 3000.0) {
+        final hillHeight = 400.0; // [m]
+        final hillPer = baseProgress / 3000.0;
+        final hillTween = math.sin(math.pi * (2.0 * hillPer - 0.5)) * 0.5 + 0.5;
+        if(i < 1) {
+          return 0.0;
+        }else{
+          final zPer = ((i - 1) / (bandNum - 1 - 1));
+          // uphill
+//          return calcEaseInOutWave(zPer) * hillHeight * hillTween;
+          // downhill
+          return math.sin(math.pi * (zPer)) * hillHeight * hillTween;
+        }
       } else {
         return 0.0;
       }
     }
-
-//    double worldRoadY = math.sin(math.pi * 2.0 * ((yPer + i / (bandNum - 1))%1.0)) * 20.0;
-    double bandZ = (progress + i * bandLength) % 6000.0;
-    double worldRoadY = calcRoadY(bandZ);
+    double worldRoadY = calcRoadY(progress, i, bandNum);
 
     double worldRoadXCenter;
     final zPer = i.toDouble() / (bandNum - 1).toDouble();
@@ -166,24 +187,14 @@ void drawGame(
   var bandList =
       generateRoad(zCountMax, farRoadDistance / zCountMax, progressInZone);
 
-  double calcCameraRotateX(double y0, double y1) {
-    final yDiff = math.min(math.max(y1 - y0, -20.0), 20.0);
-    return yDiff * math.pi / 180.0;
-  }
-
   var camera = vector.Vector3(0.0, 100.0, 200.0 * 0.0);
-  var cameraRotateX = calcCameraRotateX(bandList[0].y,
-      bandList[1].y); //(-20.0 * math.pi / 180.0)* per; // [radian]
+  var cameraRotateX = 0.0; // [radian]
   var rotY = 0.0; //(120.0/2 - 120.0*per) * math.pi / 180.0; // [radian]
   var cameraRotation = vector.Vector3(cameraRotateX, rotY, 0.0);
 
   // draw BGs
   {
-    final worldVanishingPointX = 0.0;
-    final worldVanishingPointY = 0.0;
-    final worldVanishingPointZ = farRoadDistance;
-    final worldVanishingPoint = vector.Vector3(
-        worldVanishingPointX, worldVanishingPointY, worldVanishingPointZ);
+    final worldVanishingPoint = bandList[zCountMax - 1];
 
     // camera view coordinate
     final vanishingPointCameraRotation = vector.Vector3.copy(cameraRotation);
@@ -207,6 +218,7 @@ void drawGame(
           destRect, Paint());
     }
 
+    // TODO: 道路に合わせて描画する必要がある
     // draw green ground
     canvas.drawRect(
         ui.Rect.fromLTRB(-paintBounds.width / 2.0, skylineY,
@@ -256,7 +268,8 @@ void drawGame(
             y0 <= y1 &&
             ResourceContainer.instance.roadImage.isLoaded) {
           // Draw trapezoid per band
-          final bandProgressPer = (progressInZone % 250.0) / 250.0;
+          final scrorllTimeInBand = 250.0; // [sec]
+          final bandProgressPer = (progressInZone % scrorllTimeInBand) / scrorllTimeInBand;
           final intY0 = y0.floor();
           final intY1 = y1.floor();
           if (intY0 <= intY1) {
