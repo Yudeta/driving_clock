@@ -152,10 +152,10 @@ vector.Vector3 calcPositionFromCameraToScreen(vector.Vector3 positionInScreen,
 void drawGame(
     Canvas canvas, Size size, DateTime dateTime, bool is24HourFormat) {
   final ui.Rect paintBounds =
-      ui.Rect.fromLTWH(0, 0, size.longestSide, size.shortestSide);
+      ui.Rect.fromLTWH(0, 0, size.longestSide, size.longestSide * 1.04);
 
   canvas.save();
-  canvas.translate(paintBounds.width / 2.0, paintBounds.height / 2.0);
+  canvas.translate(paintBounds.width / 2.0, paintBounds.height / 3.5);
 
   var timeInMilliseconds = dateTime.second * 1000 + dateTime.millisecond;
 
@@ -580,7 +580,7 @@ class _DrivingPainter extends CustomPainter {
     drawGame(canvas, size, dateTime, is24HourFormat);
 
     Fps.instance.update();
-    Fps.instance.draw(canvas, new Offset(0.0, 20.0), Colors.blue[800]);
+//    Fps.instance.draw(canvas, new Offset(0.0, 20.0), Colors.blue[800]);
   }
 
   @override
